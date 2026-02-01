@@ -64,6 +64,12 @@ const navItems: NavItem[] = [
     roles: ['Admin Nacional', 'Admin Institucional', 'Técnico', 'Auditor'],
   },
   {
+    to: '/adjudicaciones',
+    label: 'Adjudicaciones',
+    icon: <Gavel className="h-5 w-5" />,
+    roles: ['Admin Nacional', 'Admin Institucional', 'Auditor'],
+  },
+  {
     to: '/proveedores/mi-perfil',
     label: 'Mi perfil RNP',
     icon: <Users className="h-5 w-5" />,
