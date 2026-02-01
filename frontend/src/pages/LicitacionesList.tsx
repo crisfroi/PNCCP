@@ -75,12 +75,12 @@ export function LicitacionesList() {
       const { data: licData, error: licErr } = await q
       if (licErr) throw licErr
 
-      // Load expedientes (for form dropdown)
+      // Load expedientes (for form dropdown) - show all expedientes without licitacion
       const { data: expData, error: expErr } = await supabase
         .schema('core')
         .from('expedientes')
         .select('id, codigo_expediente, objeto_contrato, presupuesto')
-        .eq('estado_expediente_id', (await supabase.schema('core').from('estados_expediente').select('id').eq('codigo', 'borrador').single()).data?.id)
+        .not('id', 'in', `(${licData?.map((l) => `'${l.expediente_id}'`).join(',')}${licData?.length === 0 ? '""' : ''})`)
         .order('codigo_expediente')
 
       if (expErr) throw expErr
