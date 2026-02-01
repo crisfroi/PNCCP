@@ -97,6 +97,71 @@ export function ContratosList() {
     }
   }
 
+  const generarCertificado = async (contrato: Contrato) => {
+    try {
+      setGenerandoCertificado(prev => ({ ...prev, [contrato.id]: true }))
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Sesión expirada. Inicie sesión nuevamente.')
+        return
+      }
+
+      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-documents`
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          template_id: null, // Edge Function obtiene por categoría
+          entidad_origen: 'contrato',
+          entidad_id: contrato.id,
+          variables: {
+            proveedor: (contrato.proveedores as any)?.razon_social,
+            monto: contrato.monto_adjudicado,
+            fecha_inicio: contrato.fecha_inicio,
+            fecha_fin: contrato.fecha_fin,
+            objeto_contrato: (contrato.expedientes as any)?.codigo_expediente,
+          },
+        }),
+      })
+
+      const docData = await response.json()
+
+      if (docData.success && docData.emission_id) {
+        // Guardar emission_id en contrato
+        const { error: updateErr } = await supabase
+          .schema('core')
+          .from('contratos')
+          .update({ certificado_emission_id: docData.emission_id })
+          .eq('id', contrato.id)
+
+        if (updateErr) {
+          console.warn('Error al guardar certificado_emission_id:', updateErr)
+        } else {
+          // Log evento de generación
+          await supabase
+            .schema('documents')
+            .from('document_event_log')
+            .insert({
+              emission_id: docData.emission_id,
+              evento: 'contrato_finalizado',
+              entidad_tipo: 'contrato',
+              entidad_id: contrato.id,
+            })
+            .catch(() => {}) // No fallar si log falla
+        }
+      }
+    } catch (err: any) {
+      console.warn('Error generando certificado:', err.message)
+      // No bloquear el flujo si la generación falla
+    } finally {
+      setGenerandoCertificado(prev => ({ ...prev, [contrato.id]: false }))
+    }
+  }
+
   const handleChangeEstadoContrato = async (
     contratoId: string,
     nuevoEstado: 'vigente' | 'modificado' | 'terminado' | 'rescindido'
@@ -110,6 +175,15 @@ export function ContratosList() {
         .eq('id', contratoId)
 
       if (err) throw err
+
+      // Generar certificado de cumplimiento si el contrato se marca como terminado
+      if (nuevoEstado === 'terminado') {
+        const contrato = contratos.find(c => c.id === contratoId)
+        if (contrato) {
+          await generarCertificado(contrato)
+        }
+      }
+
       await loadContratos()
     } catch (err: any) {
       setError(err.message)
