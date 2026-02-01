@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased text-gray-800;
+  }
+  body {
+    @apply bg-gray-50 min-h-screen;
+  }
+}
+
+@layer components {
+  .pnccp-card {
+    @apply bg-white rounded-lg shadow-card border border-gray-100 p-5;
+  }
+  .pnccp-panel {
+    @apply bg-white rounded-lg shadow-panel border border-gray-200 p-6;
+  }
+  .pnccp-badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .pnccp-input {
+    @apply block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-institucional-accent focus:ring-1 focus:ring-institucional-accent;
+  }
+  .pnccp-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+}

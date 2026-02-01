@@ -1,0 +1,42 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { Login } from '@/pages/Login'
+import { Dashboard } from '@/pages/Dashboard'
+import { ExpedientesList } from '@/pages/ExpedientesList'
+import { WizardNuevoExpediente } from '@/pages/WizardNuevoExpediente'
+import { ExpedienteDetail } from '@/pages/ExpedienteDetail'
+import { InstitucionesList } from '@/pages/InstitucionesList'
+import { LicitacionesList } from '@/pages/LicitacionesList'
+import { ProveedoresList } from '@/pages/ProveedoresList'
+import { MiPerfilRNP } from '@/pages/MiPerfilRNP'
+import { ContratosList } from '@/pages/ContratosList'
+import { AuditoriaPage } from '@/pages/AuditoriaPage'
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Dashboard />} />
+        <Route path="expedientes" element={<ExpedientesList />} />
+        <Route path="expedientes/nuevo" element={<WizardNuevoExpediente />} />
+        <Route path="expedientes/:id" element={<ExpedienteDetail />} />
+        <Route path="instituciones" element={<InstitucionesList />} />
+        <Route path="licitaciones" element={<LicitacionesList />} />
+        <Route path="proveedores" element={<ProveedoresList />} />
+        <Route path="proveedores/mi-perfil" element={<MiPerfilRNP />} />
+        <Route path="contratos" element={<ContratosList />} />
+        <Route path="auditoria" element={<AuditoriaPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
