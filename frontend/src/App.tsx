@@ -10,6 +10,7 @@ import { InstitucionesList } from '@/pages/InstitucionesList'
 import { PerfilesList } from '@/pages/PerfilesList'
 import { RolesList } from '@/pages/RolesList'
 import { LicitacionesList } from '@/pages/LicitacionesList'
+import { OfeertasLicitacionDetail } from '@/pages/OfeertasLicitacionDetail'
 import { ProveedoresList } from '@/pages/ProveedoresList'
 import { MiPerfilRNP } from '@/pages/MiPerfilRNP'
 import { ContratosList } from '@/pages/ContratosList'
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="perfiles" element={<PerfilesList />} />
         <Route path="roles" element={<RolesList />} />
         <Route path="licitaciones" element={<LicitacionesList />} />
+        <Route path="licitaciones/:id/ofertas" element={<OfeertasLicitacionDetail />} />
         <Route path="proveedores" element={<ProveedoresList />} />
         <Route path="proveedores/mi-perfil" element={<MiPerfilRNP />} />
         <Route path="contratos" element={<ContratosList />} />
