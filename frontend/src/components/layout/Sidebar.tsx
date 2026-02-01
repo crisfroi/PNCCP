@@ -108,6 +108,18 @@ const navItems: NavItem[] = [
     icon: <FileCheck className="h-5 w-5" />,
     roles: ['Admin Nacional', 'Admin Institucional', 'Técnico', 'Auditor'],
   },
+  {
+    to: '/analytics',
+    label: 'Analítica',
+    icon: <BarChart3 className="h-5 w-5" />,
+    roles: ['Admin Nacional', 'Admin Institucional', 'Auditor'],
+  },
+  {
+    to: '/reporte-institucion',
+    label: 'Reporte por Institución',
+    icon: <TrendingUp className="h-5 w-5" />,
+    roles: ['Admin Nacional', 'Admin Institucional', 'Auditor'],
+  },
 ]
 
 export function Sidebar() {
