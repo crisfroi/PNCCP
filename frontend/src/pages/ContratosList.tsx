@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
-import { FileCheck, Plus, CheckCircle } from 'lucide-react'
+import { FileCheck, Plus, CheckCircle, Loader } from 'lucide-react'
 
 interface Hito {
   id: string
