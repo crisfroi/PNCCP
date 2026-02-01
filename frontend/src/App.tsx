@@ -17,6 +17,8 @@ import { ProveedoresList } from '@/pages/ProveedoresList'
 import { MiPerfilRNP } from '@/pages/MiPerfilRNP'
 import { ContratosList } from '@/pages/ContratosList'
 import { AuditoriaPage } from '@/pages/AuditoriaPage'
+import { DocumentosPage } from '@/pages/DocumentosPage'
+import { EmisionesDocumentalesPage } from '@/pages/EmisionesDocumentalesPage'
 
 export default function App() {
   return (
