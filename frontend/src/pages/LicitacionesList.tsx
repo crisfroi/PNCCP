@@ -457,9 +457,23 @@ export function LicitacionesList() {
               <div key={lic.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">
-                      {(lic.expedientes as any)?.codigo_expediente}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-gray-900">
+                        {(lic.expedientes as any)?.codigo_expediente}
+                      </h3>
+                      {lic.pliego_emission_id && (
+                        <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                          <FileText className="h-3 w-3" />
+                          Pliego
+                        </span>
+                      )}
+                      {generandoPliegos[lic.id] && (
+                        <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          <Loader className="h-3 w-3 animate-spin" />
+                          Generando...
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600">
                       {(lic.expedientes as any)?.objeto_contrato}
                     </p>
