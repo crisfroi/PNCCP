@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
-import { Gavel, Search, Plus, Edit2, CheckCircle, Trash2 } from 'lucide-react'
+import { Gavel, Search, Plus, Edit2, CheckCircle, Trash2, FileText, Loader } from 'lucide-react'
 
 const ESTADOS = ['borrador', 'publicada', 'cerrada', 'adjudicada'] as const
 const ESTADOS_FILTRO = [
@@ -21,6 +21,7 @@ interface Licitacion {
   fecha_publicacion?: string
   fecha_cierre: string
   estado: 'borrador' | 'publicada' | 'cerrada' | 'adjudicada'
+  pliego_emission_id?: string
   created_at: string
   updated_at: string
   expedientes?: {
@@ -48,6 +49,7 @@ export function LicitacionesList() {
   const [error, setError] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [generandoPliegos, setGenerandoPliegos] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState({
     expediente_id: '',
     fecha_cierre: '',
@@ -65,7 +67,7 @@ export function LicitacionesList() {
         .schema('procurement')
         .from('licitaciones')
         .select(`
-          id, expediente_id, fecha_publicacion, fecha_cierre, estado, created_at, updated_at,
+          id, expediente_id, fecha_publicacion, fecha_cierre, estado, pliego_emission_id, created_at, updated_at,
           expedientes(id, codigo_expediente, objeto_contrato, presupuesto)
         `)
         .order('fecha_cierre', { ascending: false })
@@ -179,9 +181,86 @@ export function LicitacionesList() {
     }
   }
 
+  // Generar Pliego de Condiciones automáticamente
+  const generarPliego = async (licitacion: Licitacion) => {
+    try {
+      setGenerandoPliegos(prev => ({ ...prev, [licitacion.id]: true }))
+
+      if (!licitacion.expedientes) {
+        setError('No se pudieron obtener los datos del expediente')
+        return
+      }
+
+      // Obtener la sesión para obtener el access token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Sesión expirada. Inicie sesión nuevamente.')
+        return
+      }
+
+      // Llamar Edge Function para generar pliego
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-documents`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            template_id: null, // Edge Function obtiene por categoría
+            entidad_origen: 'licitacion',
+            entidad_id: licitacion.id,
+            variables: {
+              objeto_contrato: licitacion.expedientes.objeto_contrato,
+              presupuesto: licitacion.expedientes.presupuesto,
+              fecha_cierre: licitacion.fecha_cierre,
+              codigo_expediente: licitacion.expedientes.codigo_expediente
+            }
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      if (!data.success) {
+        setError(`Error generando pliego: ${data.error}`)
+        return
+      }
+
+      // Guardar emission_id en licitación
+      const { error: updateErr } = await supabase
+        .schema('procurement')
+        .from('licitaciones')
+        .update({ pliego_emission_id: data.emission_id })
+        .eq('id', licitacion.id)
+
+      if (updateErr) throw updateErr
+
+      // Log evento de generación
+      await supabase
+        .schema('documents')
+        .from('document_event_log')
+        .insert({
+          emission_id: data.emission_id,
+          evento: 'licitacion_publicada',
+          entidad_tipo: 'licitacion',
+          entidad_id: licitacion.id
+        })
+        .catch(() => {}) // No fallar si log falla
+
+      await loadData()
+    } catch (err: any) {
+      setError(`Error al generar pliego: ${err.message}`)
+    } finally {
+      setGenerandoPliegos(prev => ({ ...prev, [licitacion.id]: false }))
+    }
+  }
+
   const handlePublicar = async (licitacion: Licitacion) => {
     setSaving(true)
     try {
+      // Actualizar estado a publicada
       const { error: err } = await supabase
         .schema('procurement')
         .from('licitaciones')
@@ -192,7 +271,9 @@ export function LicitacionesList() {
         .eq('id', licitacion.id)
 
       if (err) throw err
-      await loadData()
+
+      // Generar pliego automáticamente
+      await generarPliego({ ...licitacion, estado: 'publicada' })
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -376,9 +457,23 @@ export function LicitacionesList() {
               <div key={lic.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">
-                      {(lic.expedientes as any)?.codigo_expediente}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-gray-900">
+                        {(lic.expedientes as any)?.codigo_expediente}
+                      </h3>
+                      {lic.pliego_emission_id && (
+                        <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                          <FileText className="h-3 w-3" />
+                          Pliego
+                        </span>
+                      )}
+                      {generandoPliegos[lic.id] && (
+                        <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          <Loader className="h-3 w-3 animate-spin" />
+                          Generando...
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600">
                       {(lic.expedientes as any)?.objeto_contrato}
                     </p>
@@ -403,7 +498,8 @@ export function LicitacionesList() {
                         {lic.estado === 'borrador' && (
                           <button
                             onClick={() => handlePublicar(lic)}
-                            className="text-green-600 hover:text-green-800"
+                            disabled={saving || generandoPliegos[lic.id]}
+                            className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Publicar"
                           >
                             <CheckCircle className="h-4 w-4" />
@@ -416,6 +512,17 @@ export function LicitacionesList() {
                             title="Cerrar"
                           >
                             <CheckCircle className="h-4 w-4" />
+                          </button>
+                        )}
+                        {/* Botón para regenerar pliego si ya está publicada */}
+                        {lic.estado === 'publicada' && lic.pliego_emission_id && (
+                          <button
+                            onClick={() => generarPliego(lic)}
+                            disabled={generandoPliegos[lic.id]}
+                            className="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Regenerar Pliego"
+                          >
+                            <FileText className="h-4 w-4" />
                           </button>
                         )}
                         {(lic.estado === 'borrador' || lic.estado === 'cerrada') && (

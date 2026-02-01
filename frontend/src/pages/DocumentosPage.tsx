@@ -26,7 +26,7 @@ interface FormData {
   descripcion_usos: string
 }
 
-export default function DocumentosPage() {
+export function DocumentosPage() {
   const { user, profile } = useAuth()
   const [templates, setTemplates] = useState<DocumentTemplate[]>([])
   const [loading, setLoading] = useState(true)

@@ -29,7 +29,7 @@ interface DocumentEmission {
   metadata?: Record<string, any>
 }
 
-export default function EmisionesDocumentalesPage() {
+export function EmisionesDocumentalesPage() {
   const { user, profile } = useAuth()
   const [emissions, setEmissions] = useState<DocumentEmission[]>([])
   const [loading, setLoading] = useState(true)
