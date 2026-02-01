@@ -19,6 +19,8 @@ import { ContratosList } from '@/pages/ContratosList'
 import { AuditoriaPage } from '@/pages/AuditoriaPage'
 import { DocumentosPage } from '@/pages/DocumentosPage'
 import { EmisionesDocumentalesPage } from '@/pages/EmisionesDocumentalesPage'
+import { DashboardAnalytics } from '@/pages/DashboardAnalytics'
+import { ReportePorInstitucion } from '@/pages/ReportePorInstitucion'
 
 export default function App() {
   return (
@@ -49,6 +51,8 @@ export default function App() {
         <Route path="auditoria" element={<AuditoriaPage />} />
         <Route path="documentos" element={<DocumentosPage />} />
         <Route path="emisiones-documentales" element={<EmisionesDocumentalesPage />} />
+        <Route path="analytics" element={<DashboardAnalytics />} />
+        <Route path="reporte-institucion" element={<ReportePorInstitucion />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

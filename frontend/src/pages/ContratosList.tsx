@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
-import { FileCheck, Plus, CheckCircle } from 'lucide-react'
+import { FileCheck, Plus, CheckCircle, Loader } from 'lucide-react'
 
 interface Hito {
   id: string
@@ -21,6 +21,9 @@ interface Contrato {
   fecha_fin: string
   estado: 'vigente' | 'modificado' | 'terminado' | 'rescindido'
   created_at: string
+  resolucion_emission_id?: string
+  contrato_emission_id?: string
+  certificado_emission_id?: string
   expedientes?: { codigo_expediente: string }
   proveedores?: { razon_social: string }
   hitos_contrato?: Hito[]
@@ -35,6 +38,7 @@ export function ContratosList() {
   const [error, setError] = useState('')
   const [crearHito, setCrearHito] = useState<string | null>(null)
   const [formHito, setFormHito] = useState({ descripcion: '', fecha_prevista: '' })
+  const [generandoCertificado, setGenerandoCertificado] = useState<Record<string, boolean>>({})
 
   const canEdit = isAdminInstitucional || isAdminNacional
 
@@ -46,6 +50,7 @@ export function ContratosList() {
         .from('contratos')
         .select(`
           id, monto_adjudicado, fecha_inicio, fecha_fin, estado, created_at,
+          resolucion_emission_id, contrato_emission_id, certificado_emission_id,
           expedientes(codigo_expediente),
           proveedores:rnp.proveedores(razon_social),
           hitos_contrato(id, descripcion, fecha_prevista, fecha_real, estado)
@@ -96,6 +101,71 @@ export function ContratosList() {
     }
   }
 
+  const generarCertificado = async (contrato: Contrato) => {
+    try {
+      setGenerandoCertificado(prev => ({ ...prev, [contrato.id]: true }))
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Sesión expirada. Inicie sesión nuevamente.')
+        return
+      }
+
+      const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-documents`
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          template_id: null, // Edge Function obtiene por categoría
+          entidad_origen: 'contrato',
+          entidad_id: contrato.id,
+          variables: {
+            proveedor: (contrato.proveedores as any)?.razon_social,
+            monto: contrato.monto_adjudicado,
+            fecha_inicio: contrato.fecha_inicio,
+            fecha_fin: contrato.fecha_fin,
+            objeto_contrato: (contrato.expedientes as any)?.codigo_expediente,
+          },
+        }),
+      })
+
+      const docData = await response.json()
+
+      if (docData.success && docData.emission_id) {
+        // Guardar emission_id en contrato
+        const { error: updateErr } = await supabase
+          .schema('core')
+          .from('contratos')
+          .update({ certificado_emission_id: docData.emission_id })
+          .eq('id', contrato.id)
+
+        if (updateErr) {
+          console.warn('Error al guardar certificado_emission_id:', updateErr)
+        } else {
+          // Log evento de generación
+          await supabase
+            .schema('documents')
+            .from('document_event_log')
+            .insert({
+              emission_id: docData.emission_id,
+              evento: 'contrato_finalizado',
+              entidad_tipo: 'contrato',
+              entidad_id: contrato.id,
+            })
+            .catch(() => {}) // No fallar si log falla
+        }
+      }
+    } catch (err: any) {
+      console.warn('Error generando certificado:', err.message)
+      // No bloquear el flujo si la generación falla
+    } finally {
+      setGenerandoCertificado(prev => ({ ...prev, [contrato.id]: false }))
+    }
+  }
+
   const handleChangeEstadoContrato = async (
     contratoId: string,
     nuevoEstado: 'vigente' | 'modificado' | 'terminado' | 'rescindido'
@@ -109,6 +179,15 @@ export function ContratosList() {
         .eq('id', contratoId)
 
       if (err) throw err
+
+      // Generar certificado de cumplimiento si el contrato se marca como terminado
+      if (nuevoEstado === 'terminado') {
+        const contrato = contratos.find(c => c.id === contratoId)
+        if (contrato) {
+          await generarCertificado(contrato)
+        }
+      }
+
       await loadContratos()
     } catch (err: any) {
       setError(err.message)
@@ -207,7 +286,7 @@ export function ContratosList() {
                         <label className="text-xs font-medium uppercase text-gray-500">
                           Cambiar estado
                         </label>
-                        <div className="mt-2 flex gap-2 flex-wrap">
+                        <div className="mt-2 flex gap-2 flex-wrap items-center">
                           {['vigente', 'modificado', 'terminado', 'rescindido'].map((estado) => (
                             <button
                               key={estado}
@@ -217,11 +296,24 @@ export function ContratosList() {
                                   estado as 'vigente' | 'modificado' | 'terminado' | 'rescindido'
                                 )
                               }
-                              className="text-xs px-2 py-1 rounded bg-white border border-gray-200 hover:bg-gray-100"
+                              disabled={saving || generandoCertificado[contrato.id]}
+                              className="text-xs px-2 py-1 rounded bg-white border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {estado}
                             </button>
                           ))}
+                          {contrato.certificado_emission_id && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              <FileCheck className="h-3 w-3" />
+                              Certificado
+                            </span>
+                          )}
+                          {generandoCertificado[contrato.id] && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded animate-pulse">
+                              <Loader className="h-3 w-3 animate-spin" />
+                              Generando...
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
