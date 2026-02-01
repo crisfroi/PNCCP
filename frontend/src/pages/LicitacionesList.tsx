@@ -21,6 +21,7 @@ interface Licitacion {
   fecha_publicacion?: string
   fecha_cierre: string
   estado: 'borrador' | 'publicada' | 'cerrada' | 'adjudicada'
+  pliego_emission_id?: string
   created_at: string
   updated_at: string
   expedientes?: {
