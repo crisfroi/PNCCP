@@ -498,7 +498,8 @@ export function LicitacionesList() {
                         {lic.estado === 'borrador' && (
                           <button
                             onClick={() => handlePublicar(lic)}
-                            className="text-green-600 hover:text-green-800"
+                            disabled={saving || generandoPliegos[lic.id]}
+                            className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Publicar"
                           >
                             <CheckCircle className="h-4 w-4" />
@@ -511,6 +512,17 @@ export function LicitacionesList() {
                             title="Cerrar"
                           >
                             <CheckCircle className="h-4 w-4" />
+                          </button>
+                        )}
+                        {/* Botón para regenerar pliego si ya está publicada */}
+                        {lic.estado === 'publicada' && lic.pliego_emission_id && (
+                          <button
+                            onClick={() => generarPliego(lic)}
+                            disabled={generandoPliegos[lic.id]}
+                            className="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Regenerar Pliego"
+                          >
+                            <FileText className="h-4 w-4" />
                           </button>
                         )}
                         {(lic.estado === 'borrador' || lic.estado === 'cerrada') && (
