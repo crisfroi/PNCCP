@@ -286,7 +286,7 @@ export function ContratosList() {
                         <label className="text-xs font-medium uppercase text-gray-500">
                           Cambiar estado
                         </label>
-                        <div className="mt-2 flex gap-2 flex-wrap">
+                        <div className="mt-2 flex gap-2 flex-wrap items-center">
                           {['vigente', 'modificado', 'terminado', 'rescindido'].map((estado) => (
                             <button
                               key={estado}
@@ -296,11 +296,24 @@ export function ContratosList() {
                                   estado as 'vigente' | 'modificado' | 'terminado' | 'rescindido'
                                 )
                               }
-                              className="text-xs px-2 py-1 rounded bg-white border border-gray-200 hover:bg-gray-100"
+                              disabled={saving || generandoCertificado[contrato.id]}
+                              className="text-xs px-2 py-1 rounded bg-white border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {estado}
                             </button>
                           ))}
+                          {contrato.certificado_emission_id && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              <FileCheck className="h-3 w-3" />
+                              Certificado
+                            </span>
+                          )}
+                          {generandoCertificado[contrato.id] && (
+                            <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded animate-pulse">
+                              <Loader className="h-3 w-3 animate-spin" />
+                              Generando...
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
