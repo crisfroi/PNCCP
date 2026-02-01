@@ -51,6 +51,8 @@ export default function App() {
         <Route path="auditoria" element={<AuditoriaPage />} />
         <Route path="documentos" element={<DocumentosPage />} />
         <Route path="emisiones-documentales" element={<EmisionesDocumentalesPage />} />
+        <Route path="analytics" element={<DashboardAnalytics />} />
+        <Route path="reporte-institucion" element={<ReportePorInstitucion />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
