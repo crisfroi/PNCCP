@@ -67,7 +67,7 @@ export function LicitacionesList() {
         .schema('procurement')
         .from('licitaciones')
         .select(`
-          id, expediente_id, fecha_publicacion, fecha_cierre, estado, created_at, updated_at,
+          id, expediente_id, fecha_publicacion, fecha_cierre, estado, pliego_emission_id, created_at, updated_at,
           expedientes(id, codigo_expediente, objeto_contrato, presupuesto)
         `)
         .order('fecha_cierre', { ascending: false })
