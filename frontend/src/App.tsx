@@ -7,6 +7,8 @@ import { ExpedientesList } from '@/pages/ExpedientesList'
 import { WizardNuevoExpediente } from '@/pages/WizardNuevoExpediente'
 import { ExpedienteDetail } from '@/pages/ExpedienteDetail'
 import { InstitucionesList } from '@/pages/InstitucionesList'
+import { PerfilesList } from '@/pages/PerfilesList'
+import { RolesList } from '@/pages/RolesList'
 import { LicitacionesList } from '@/pages/LicitacionesList'
 import { ProveedoresList } from '@/pages/ProveedoresList'
 import { MiPerfilRNP } from '@/pages/MiPerfilRNP'
@@ -30,6 +32,8 @@ export default function App() {
         <Route path="expedientes/nuevo" element={<WizardNuevoExpediente />} />
         <Route path="expedientes/:id" element={<ExpedienteDetail />} />
         <Route path="instituciones" element={<InstitucionesList />} />
+        <Route path="perfiles" element={<PerfilesList />} />
+        <Route path="roles" element={<RolesList />} />
         <Route path="licitaciones" element={<LicitacionesList />} />
         <Route path="proveedores" element={<ProveedoresList />} />
         <Route path="proveedores/mi-perfil" element={<MiPerfilRNP />} />
