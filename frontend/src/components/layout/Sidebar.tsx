@@ -9,6 +9,7 @@ import {
   Shield,
   Users,
   CheckSquare,
+  File,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
