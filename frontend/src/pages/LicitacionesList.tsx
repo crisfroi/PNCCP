@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { useAuth } from '@/contexts/AuthContext'
-import { Gavel, Search, Plus, Edit2, CheckCircle, Trash2 } from 'lucide-react'
+import { Gavel, Search, Plus, Edit2, CheckCircle, Trash2, FileText, Loader } from 'lucide-react'
 
 const ESTADOS = ['borrador', 'publicada', 'cerrada', 'adjudicada'] as const
 const ESTADOS_FILTRO = [
