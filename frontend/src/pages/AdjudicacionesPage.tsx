@@ -208,34 +208,107 @@ export function AdjudicacionesPage() {
 
       if (createContratErr) throw createContratErr
 
-      // Generar automáticamente documento de resolución de adjudicación
+      // Generar automáticamente documentos (Resolución + Contrato)
       if (contratoData) {
         try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session) {
+            console.warn('Sesión expirada, no se generarán documentos')
+            setAdjudicandoLicitacion(null)
+            await loadData()
+            return
+          }
+
           const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-documents`
-          const response = await fetch(edgeFunctionUrl, {
+
+          // 1. Generar Resolución de Adjudicación
+          const resolucionResponse = await fetch(edgeFunctionUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('sb-token') || ''}`,
+              'Authorization': `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
-              template_id: '', // Se buscaría por categoría en producción
-              entidad_origen: 'contrato',
-              entidad_id: contratoData.id,
+              template_id: null,
+              entidad_origen: 'licitacion',
+              entidad_id: licitacion.id,
               variables: {
                 ganador: oferta.proveedores?.razon_social,
-                monto: oferta.monto.toLocaleString('es-ES', { style: 'currency', currency: 'XAF' }),
-                fundamento: `Resolución de adjudicación a favor del proveedor seleccionado tras evaluación de ofertas`,
+                monto: oferta.monto,
+                puntuacion_total: (oferta.evaluaciones as any)?.puntuacion_total || 0,
               },
             }),
           })
 
-          if (response.ok) {
-            const docResult = await response.json()
-            console.log('Documento generado:', docResult)
+          const resolucionData = await resolucionResponse.json()
+
+          // 2. Generar Contrato Público
+          const contratoResponse = await fetch(edgeFunctionUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              template_id: null,
+              entidad_origen: 'contrato',
+              entidad_id: contratoData.id,
+              variables: {
+                proveedor: oferta.proveedores?.razon_social,
+                monto: oferta.monto,
+                fecha_inicio: form.fecha_inicio,
+                fecha_fin: form.fecha_fin,
+                objeto_contrato: (licitacion.expedientes as any)?.objeto_contrato,
+              },
+            }),
+          })
+
+          const contratoDocData = await contratoResponse.json()
+
+          // 3. Actualizar contrato con los emission_ids
+          if (resolucionData.success && resolucionData.emission_id) {
+            const { error: resErr } = await supabase
+              .schema('core')
+              .from('contratos')
+              .update({ resolucion_emission_id: resolucionData.emission_id })
+              .eq('id', contratoData.id)
+
+            if (!resErr) {
+              await supabase
+                .schema('documents')
+                .from('document_event_log')
+                .insert({
+                  emission_id: resolucionData.emission_id,
+                  evento: 'adjudicacion_realizada',
+                  entidad_tipo: 'licitacion',
+                  entidad_id: licitacion.id,
+                })
+                .catch(() => {})
+            }
+          }
+
+          if (contratoDocData.success && contratoDocData.emission_id) {
+            const { error: contErr } = await supabase
+              .schema('core')
+              .from('contratos')
+              .update({ contrato_emission_id: contratoDocData.emission_id })
+              .eq('id', contratoData.id)
+
+            if (!contErr) {
+              await supabase
+                .schema('documents')
+                .from('document_event_log')
+                .insert({
+                  emission_id: contratoDocData.emission_id,
+                  evento: 'contrato_creado',
+                  entidad_tipo: 'contrato',
+                  entidad_id: contratoData.id,
+                })
+                .catch(() => {})
+            }
           }
         } catch (docErr) {
-          console.warn('Error generando documento:', docErr)
+          console.warn('Error generando documentos:', docErr)
           // No bloquear el flujo si la generación falla
         }
       }
